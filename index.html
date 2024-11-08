@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Makerere University Halls</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css" />
+  <style>
+    #map {
+      height: 90vh;
+      width: 100%;
+    }
+    header {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 10px;
+      font-family: Arial, sans-serif;
+      margin: 10px 0;
+    }
+    header img {
+      width: 40px;
+      height: auto;
+    }
+    .metadata-link-container {
+      text-align: center;
+      margin-top: 5px;
+    }
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.8);
+    }
+    .modal-content {
+      margin: 5% auto;
+      display: block;
+      max-width: 90%;
+    }
+    .close {
+      position: absolute;
+      top: 15px;
+      right: 35px;
+      color: #fff;
+      font-size: 30px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <img src="Logo.png" alt="Makerere University Logo" />
+    <h1>Makerere University Halls</h1>
+  </header>
+
+  <div class="metadata-link-container">
+    <a href="metadata.html" class="metadata-link">Metadata</a>
+  </div>
+  
+  <div id="map"></div>
+
+  <!-- Modal for enlarged images -->
+  <div id="myModal" class="modal">
+    <span class="close" onclick="closeModal()">&times;</span>
+    <img class="modal-content" id="modalImg">
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"></script>
+
+  <script>
+    var map = L.map('map').setView([0.334222, 32.571289], 16);
+
+    // Add MapTiler tile layer
+    L.tileLayer('https://api.maptiler.com/maps/streets/{z}/{x}/{y}.png?key=mA6vfjqCDlEQwIkU813N', {
+      tileSize: 512,
+      zoomOffset: -1,
+      minZoom: 1,
+      attribution: '© MapTiler © OpenStreetMap contributors',
+      crossOrigin: true
+    }).addTo(map);
+
+    // List of halls with coordinates, names, and image paths
+    const halls = [
+      { name: "Africa Hall", lat: 0.337982014, lng: 32.5686587, image: "Africa.jpg" },
+      { name: "Livingstone Hall", lat: 0.3390653, lng: 32.567972, image: "Livingstone.jpg" },
+      { name: "Nkrumah Hall", lat: 0.33626, lng: 32.5692193, image: "Nkrumah.jpg" },
+      { name: "Mary Stuart Hall", lat: 0.33095, lng: 32.56658, image: "Marystuart.jpg" },
+      { name: "Mitchell Hall", lat: 0.333860, lng: 32.570482, image: "Mitchell.jpg" },
+      { name: "University Hall", lat: 0.33322, lng: 32.57254, image: "University.jpg" },
+      { name: "Lumumba Hall", lat: 0.331793, lng: 32.565850, image: "Lumumba.jpg" },
+      { name: "Complex Hall", lat: 0.33001, lng: 32.56991, image: "complex.jpg" }
+    ];
+
+    function openModal(imgSrc) {
+      var modal = document.getElementById("myModal");
+      var modalImg = document.getElementById("modalImg");
+      modal.style.display = "block";
+      modalImg.src = imgSrc;
+    }
+
+    function closeModal() {
+      var modal = document.getElementById("myModal");
+      modal.style.display = "none";
+    }
+
+    halls.forEach(hall => {
+      L.marker([hall.lat, hall.lng])
+        .addTo(map)
+        .bindPopup(`
+          <div>
+            <img src="${hall.image}" alt="${hall.name}" style="width: 100%; height: auto; border-radius: 5px; cursor: pointer;" onclick="openModal('${hall.image}')" />
+            <strong>${hall.name}</strong><br>
+            <button onclick="getDirections(${hall.lat}, ${hall.lng})">Get Directions</button>
+          </div>
+        `);
+    });
+
+    let userMarker;
+    let smallCircle;
+
+    // Request the user's live location with high accuracy
+    map.locate({ setView: true, watch: true, maxZoom: 16, enableHighAccuracy: true });
+
+    map.on('locationfound', function(e) {
+      if (userMarker && smallCircle) {
+        // Update existing marker and small red circle
+        userMarker.setLatLng(e.latlng);
+        smallCircle.setLatLng(e.latlng);
+      } else {
+        // Create a small red marker and circle for the user’s location
+        userMarker = L.marker(e.latlng, { icon: L.icon({
+          iconUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png',
+          iconSize: [25, 41],
+          iconAnchor: [12, 41]
+        }) }).addTo(map).bindPopup("You are here").openPopup();
+
+        smallCircle = L.circle(e.latlng, { radius: 5, color: 'red', fillColor: 'red', fillOpacity: 0.5 }).addTo(map);
+      }
+    });
+
+    function getDirections(destLat, destLng) {
+      if (window.currentRoute) {
+        map.removeControl(window.currentRoute);
+      }
+      
+      window.currentRoute = L.Routing.control({
+        waypoints: [
+          userMarker.getLatLng(),
+          L.latLng(destLat, destLng)
+        ],
+        routeWhileDragging: true,
+        createMarker: function() { return null; }
+      }).addTo(map);
+    }
+  </script>
+
+</body>
+</html>
